@@ -10,7 +10,7 @@ CHAT_ID = "@cookieslinkserver"
 URL = "http://skysysx.net/e/boss"
 
 CHECK_INTERVAL = 2
-ALIVE_INTERVAL = 300
+ALIVE_INTERVAL = 1800
 RETRY_LIMIT = 3
 
 # ============== STATE ==============
