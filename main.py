@@ -117,12 +117,12 @@ def bot_loop():
             current_status = "down"
             message = "❌ Site Down"
 
-        now_time_str = datetime.datetime.now().strftime("%H:%M:%S")
+        now_time_str = datetime.datetime.now().strftime("%I:%M:%S %p")
         last_check_time = now_time_str
 
         # 🔥 status change alert
         if current_status != last_status:
-            send(f"{message} | {now_time_str}")
+            send(f"{message} {now_time_str}")
             last_alert_time = now_time_str
             last_status = current_status
 
@@ -139,4 +139,4 @@ if __name__ == "__main__":
     threading.Thread(target=process_queue, daemon=True).start()
     threading.Thread(target=bot_loop, daemon=True).start()
     app.run(host="0.0.0.0", port=10000)
-            
+    
