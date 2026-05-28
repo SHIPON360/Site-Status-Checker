@@ -117,7 +117,7 @@ def bot_loop():
             current_status = "down"
             message = "❌ Site Down"
 
-        now_time_str = datetime.datetime.now().strftime("%I:%M:%S %p")
+        now_time_str = (datetime.datetime.utcnow() + datetime.timedelta(hours=6)).strftime("%I:%M:%S %p")
         last_check_time = now_time_str
 
         # 🔥 status change alert
