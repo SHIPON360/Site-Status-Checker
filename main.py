@@ -9,10 +9,12 @@ from flask import Flask, request, jsonify
 # ==========================================
 TOKEN = "8529553766:AAGbCA43c868iHOFqoemoGITsXrugF-xx8A"   # WARNING: Put your Telegram Bot Token here
 CHAT_ID = "@cookieslinkserver"   # WARNING: Put your Telegram Chat ID here
-URL = "http://skysysx.net/e/boss"    # WARNING: Put the Target Website URL here
 
-CHECK_INTERVAL = 1      # Normal delay between each check (in seconds)
-ALIVE_INTERVAL = 3600   # Sends an 'Alive' ping every 1 hour (3600 seconds)
+# 🎯 The Golden API URL (Direct Brain of the website)
+URL = "https://skysysx.net/api/info"    
+
+CHECK_INTERVAL = 3      # Normal delay between each check (in seconds)
+ALIVE_INTERVAL = 60   # Sends an 'Alive' ping every 1 hour (3600 seconds)
 RETRY_LIMIT = 3         # Number of times it will try to send a failed message
 
 # ==========================================
@@ -33,7 +35,7 @@ app = Flask(__name__)
 @app.route("/")
 def dashboard():
     return f"""
-    <h2>🤖 Bot Dashboard</h2>
+    <h2>🤖 Grandmaster API Bot Dashboard</h2>
     <p>Status: {last_status}</p>
     <p>Last Check: {last_check_time}</p>
     <p>Last Alert: {last_alert_time}</p>
@@ -82,7 +84,7 @@ def send(msg):
             pass
         time.sleep(1)
 
-    # If all retries fail, save it to the queue to send later
+    # If all retries fail, save it to the queue to send later (Zero Signal Loss)
     if not success:
         message_queue.append(msg)
 
@@ -102,9 +104,10 @@ def process_queue():
 def bot_loop():
     global last_status, last_check_time, last_alert_time, last_ping_time
     
-    # Fake Browser Headers to bypass Firewall
+    # Fake Browser Headers - Specifically demanding JSON data
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+        "Accept": "application/json",
         "Accept-Language": "en-US,en;q=0.9"
     }
 
@@ -115,64 +118,71 @@ def bot_loop():
 
         try:
             res = requests.get(URL, headers=headers, timeout=10)
-            text = res.text.lower()
             status_code = res.status_code
             
-            # 0. Anti-Ban (Soft block 429) - Silent Retry without changing status
-            if status_code == 429 or "too many requests" in text:
-                print("Soft block (429) hit! Silently retrying...")
+            # 0. Anti-Ban (Soft block 429) - Silent Retry without status change
+            if status_code == 429 or "too many requests" in res.text.lower():
+                print("⚠️ Soft block (429) hit! Silently retrying...")
                 time.sleep(CHECK_INTERVAL)
                 continue 
             
-            # Text conditions mapping
-            has_offline_text = any(x in text for x in ["buyer api offline", "submissions are locked", "买家 api已离线"])
-            has_online_text = any(x in text for x in ["input (one per line)", "output (copyable)", "click convert"])
-            
-            # Print debug logs to Render console
-            print(f"Code: {status_code} | Offline: {has_offline_text} | Online: {has_online_text}")
+            # 1. Success check (Code 200) - The API way
+            if status_code == 200:
+                try:
+                    # 🧠 Extracting the direct brain (JSON Data)
+                    data = res.json() 
+                    
+                    # 🎯 The Master Key (Defaults to True if something goes wrong)
+                    is_offline = data.get("api_offline_locked", True) 
+                    
+                    print(f"Code: {status_code} | api_offline_locked: {is_offline}")
 
-            # 1. Strict OFFLINE Check (Pop-up detected)
-            if has_offline_text:
-                current_status = "offline"
-                message = "🔴 Buyer OFFLINE"
+                    # Logic execution based on the master key
+                    if is_offline == True:
+                        current_status = "offline"
+                        message = "🔴 Buyer OFFLINE"
+                    else:
+                        current_status = "online"
+                        message = "🟢 Buyer ONLINE"
                 
-            # 2. Strict ONLINE Check
-            elif has_online_text:
-                current_status = "online"
-                message = "🟢 Buyer ONLINE"
-                
-            # 3. Server Error Check
-            elif status_code in [502, 503] or "bad gateway" in text:
+                # Failsafe if server sends HTML instead of JSON
+                except Exception as json_err:
+                    current_status = "error"
+                    message = "⚠️ Data Parse Error"
+                    print(f"Failed to read JSON: {json_err}")
+            
+            # 2. Server Error Check (Cloudflare or Backend issues)
+            elif status_code in [502, 503, 504] or "bad gateway" in res.text.lower():
                 current_status = "error"
                 message = f"⚠️ Site Error {status_code}"
                 
-            # 4. Unknown Status Check
+            # 3. Unknown Status Check
             else:
                 current_status = "unknown"
-                message = "❓ Unknown Status"
+                message = f"❓ Unknown Status (Code: {status_code})"
 
         except Exception as e:
             current_status = "down"
             message = "❌ Site Down"
-            print(f"Error fetching site: {e}")
+            print(f"Error fetching API: {e}")
 
         # Time Formatting (+6 Hours for Bangladesh Standard Time)
         now_time_str = (datetime.datetime.utcnow() + datetime.timedelta(hours=6)).strftime("%I:%M:%S %p")
         last_check_time = now_time_str
 
-        # Status Change Alert (Triggers only when status changes)
+        # Status Change Alert (Triggers ONLY when the status actually changes)
         if current_status != last_status:
             send(f"{message} - {now_time_str}")
             last_alert_time = now_time_str
             last_status = current_status
 
-        # Alive Ping Checker
+        # Alive Ping Checker (Ensures the bot is running in the background)
         now_time = time.time()
         if now_time - last_ping_time > ALIVE_INTERVAL:
             send(f"💚 Alive: {now_time_str}")
             last_ping_time = now_time
 
-        # Normal Delay
+        # Normal Delay (The Polling interval)
         time.sleep(CHECK_INTERVAL)
 
 # ==========================================
@@ -182,4 +192,4 @@ if __name__ == "__main__":
     threading.Thread(target=process_queue, daemon=True).start()
     threading.Thread(target=bot_loop, daemon=True).start()
     app.run(host="0.0.0.0", port=10000)
-        
+    
