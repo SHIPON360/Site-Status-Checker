@@ -14,7 +14,7 @@ CHAT_ID = "@cookieslinkserver"   # WARNING: Put your Telegram Chat ID here
 URL = "https://skysysx.net/api/info"    
 
 CHECK_INTERVAL = 3      # Normal delay between each check (in seconds)
-ALIVE_INTERVAL = 60   # Sends an 'Alive' ping every 1 hour (3600 seconds)
+ALIVE_INTERVAL = 3600   # Sends an 'Alive' ping every 1 hour (3600 seconds)
 RETRY_LIMIT = 3         # Number of times it will try to send a failed message
 
 # ==========================================
