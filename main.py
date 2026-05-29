@@ -11,7 +11,7 @@ TOKEN = "8529553766:AAGbCA43c868iHOFqoemoGITsXrugF-xx8A"   # WARNING: Put your T
 CHAT_ID = "@cookieslinkserver"   # WARNING: Put your Telegram Chat ID here
 URL = "http://skysysx.net/e/boss"    # WARNING: Put the Target Website URL here
 
-CHECK_INTERVAL = 3      # Normal delay between each check (in seconds)
+CHECK_INTERVAL = 1      # Normal delay between each check (in seconds)
 ALIVE_INTERVAL = 3600   # Sends an 'Alive' ping every 1 hour (3600 seconds)
 RETRY_LIMIT = 3         # Number of times it will try to send a failed message
 
