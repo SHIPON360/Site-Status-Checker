@@ -4,6 +4,7 @@ import time
 import logging
 import signal
 import sys
+import random
 from datetime import datetime, timezone, timedelta
 import threading
 from typing import Any
@@ -321,10 +322,37 @@ class EliteMasterBot:
                         self.last_status = current_status
                         logger.info(f"PARADIGM SHIFT DETECTED: -> {current_status.upper()}")
 
-                    # System Heartbeat
+                    # System Heartbeat (24 Funny Messages)
                     current_epoch: float = time.time()
                     if current_epoch - self.last_ping_time > ALIVE_INTERVAL:
-                        await telegram_client.fire_and_forget(f"💚 চেক দিচ্ছি 😜 বায়ার আসলে জানাবো 😋: {now_str}")
+                        funny_msgs = [
+                            "বায়ার কি কিস্তির ভয়ে পালালো? 🏃‍♂️",
+                            "বায়ার আইলে বস্তায় ভরুম! 🥔",
+                            "ম্যাডামের কসম, বায়াররে ছাড়ুম না! 🤞",
+                            "বায়ারের নেটে কি ইঁদুরে কাটছে? 🐀",
+                            "হলুদ ছানা রেডি, বায়ার গায়েব! 🐥",
+                            "বায়ার কি লুডু খেলতেছে? 🎲",
+                            "বায়ার আইলে কান ধইরা আনুম! 👂",
+                            "বায়ারের পিসিতে শিওর ভাইরাস! 🦠",
+                            "বায়ার কি ছ্যাকা খাইছে? 💔",
+                            "বায়ারের মনে হয় এমবি শেষ! 📉",
+                            "বায়ার আইলে গামছা দিয়া বান্ধুম! 🧣",
+                            "বায়ার কি আজ রোজা রাখছে? 🤐",
+                            "চা ঠান্ডা হইয়া গেলো, বায়ার কই! ☕",
+                            "বায়ারের আইপিতে জিনে ধরছে! 🧞‍♂️",
+                            "বায়ারকে খুঁজতে পুলিশ ডাকুম? 🚓",
+                            "বায়ার আসলেই জরিমানা করুম! 💸",
+                            "বায়ার কি ভিনগ্রহে গেলো? 👽",
+                            "বায়ারের অপেক্ষায় চোখ ট্যারা! 😵‍💫",
+                            "বায়ার আইলে মুরগি জবাই! 🐓",
+                            "বায়ার মনে হয় বাথরুমে গেছে! 🚽",
+                            "বায়ারের মনে হয় কারেন্ট নাই! 🕯️",
+                            "বায়ার আসলেই সাইরেন বাজবে! 🚨",
+                            "আমি সজাগ, বায়ার লাপাত্তা! 🤦‍♂️",
+                            "বায়ার কি রাস্তা ভুলা গেছে? 🤷‍♂️"
+                        ]
+                        random_msg = random.choice(funny_msgs)
+                        await telegram_client.fire_and_forget(f"💚 {random_msg} - {now_str}")
                         self.last_ping_time = current_epoch
 
                     await asyncio.sleep(CHECK_INTERVAL)
