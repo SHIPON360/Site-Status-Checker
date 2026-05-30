@@ -21,7 +21,7 @@ URL: str = "https://skysysx.net/api/info"
 SECURITY_KEY: str = "4268!?Sk"  # WARNING: Change this to your secret password!
 
 CHECK_INTERVAL: float = 1.0    # 1.0 Second Absolute Polling
-ALIVE_INTERVAL: int = 1     
+ALIVE_INTERVAL: int = 60     
 RETRY_LIMIT: int = 5           
 MAX_BACKGROUND_RETRIES: int = 3 # Dead-Letter Queue Limit
 
