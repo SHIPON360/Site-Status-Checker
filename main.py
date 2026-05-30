@@ -324,7 +324,7 @@ class EliteMasterBot:
                     # System Heartbeat
                     current_epoch: float = time.time()
                     if current_epoch - self.last_ping_time > ALIVE_INTERVAL:
-                        await telegram_client.fire_and_forget(f"💚 Engine Alive Check: {now_str}")
+                        await telegram_client.fire_and_forget(f"💚 চেক দিচ্ছি 😜 বায়ার আসলে জানাবো 😋: {now_str}")
                         self.last_ping_time = current_epoch
 
                     await asyncio.sleep(CHECK_INTERVAL)
