@@ -117,8 +117,8 @@ def dashboard() -> str:
 
         <h3 style="color: #a78bfa;">⏳ SET 429 RATE LIMIT COOLDOWN</h3>
         <a href="javascript:secureAction('set_cooldown?sec=1.0')" style="background: #c0392b; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ AGGRESSIVE (1.0s) ]</a>
-        <a href="javascript:secureAction('set_cooldown?sec=3.0')" style="background: #f39c12; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ SAFE (3.0s) ]</a>
-        <a href="javascript:secureAction('set_cooldown?sec=5.0')" style="background: #27ae60; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ GHOST (5.0s) ]</a>
+        <a href="javascript:secureAction('set_cooldown?sec=2.0')" style="background: #f39c12; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ SAFE (2.0s) ]</a>
+        <a href="javascript:secureAction('set_cooldown?sec=3.0')" style="background: #27ae60; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ GHOST (3.0s) ]</a>
         <br><br><br>
 
         <a href="/status" style="color: #66fcf1; text-decoration: underline;">[ VIEW RAW JSON STATUS ]</a>
