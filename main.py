@@ -5,6 +5,7 @@ import logging
 import signal
 import sys
 import random
+import os
 from datetime import datetime, timezone, timedelta
 import threading
 from typing import Any
@@ -14,17 +15,19 @@ from waitress import serve
 # ==========================================
 #          APEX-LEVEL CONFIGURATION
 # ==========================================
-TOKEN: str = "8529553766:AAGbCA43c868iHOFqoemoGITsXrugF-xx8A"   # WARNING: Insert Telegram Bot Token
-CHAT_ID: str = "@cookieslinkserver"   # WARNING: Insert Telegram Chat ID
-URL: str = "https://skysysx.net/api/info"    
+# 🔐 SECURE FOR GITHUB: No real tokens here! Set these in Render Dashboard.
+TOKEN: str | None = os.getenv("TELEGRAM_BOT_TOKEN")
+SECURITY_KEY: str | None = os.getenv("APEX_SECURITY_KEY")
+CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "@cookieslinkserver")
+URL: str = os.getenv("TARGET_API_URL", "https://skysysx.net/api/info")
 
-# 🔐 SECURITY CONFIGURATION
-SECURITY_KEY: str = "4268!?Sk"  # WARNING: Change this to your secret password!
+if not TOKEN or not SECURITY_KEY:
+    raise RuntimeError("❌ ERROR: Bot Token or Security Key is missing! Please set them in Render Environment Variables.")
 
-CHECK_INTERVAL: float = 2.0    # 2.0 Second Absolute Polling
+CHECK_INTERVAL: float = 2.0    
 ALIVE_INTERVAL: int = 3600     
 RETRY_LIMIT: int = 5           
-MAX_BACKGROUND_RETRIES: int = 3 # Dead-Letter Queue Limit
+MAX_BACKGROUND_RETRIES: int = 3 
 
 # ==========================================
 #           ELITE LOGGING SYSTEM
@@ -55,7 +58,7 @@ monitor_state: dict[str, Any] = {
     "dlq_size": 0,
     "interval": CHECK_INTERVAL,  
     "circuit_limit": 6,          
-    "cooldown_429": 1.0          # 🎯 Default 429 Cooldown
+    "cooldown_429": 1.0          
 }
 
 def update_state(key: str, value: Any) -> None:
@@ -78,7 +81,7 @@ def dashboard() -> str:
     <div style="font-family: monospace; background: #0b0c10; color: #66fcf1; padding: 20px; min-height: 100vh;">
         <h2>👑 APEX ENGINE - ENTERPRISE DASHBOARD</h2>
         <p>>_ TARGET API: {URL}</p>
-        <p>>_ CURRENT STATUS: <strong style="color: #ffffff;">{current_state['status']}</strong></p>
+        <p>>_ CURRENT STATUS: <strong style="color: #ffffff; background: #c0392b; padding: 2px 5px;">{current_state['status']}</strong></p>
         <p>>_ CHECK INTERVAL: <strong style="color: #f39c12;">{current_state['interval']} Seconds</strong> ⏱️</p>
         <p>>_ CIRCUIT LIMIT: <strong style="color: #e74c3c;">{current_state['circuit_limit']} Fails</strong> 🛡️</p>
         <p>>_ 429 COOLDOWN: <strong style="color: #e74c3c;">{current_state['cooldown_429']} Seconds</strong> ⏳</p>
@@ -90,108 +93,123 @@ def dashboard() -> str:
         <hr style="border: 1px solid #45a29e;">
         
         <script>
-            function secureAction(action) {{
+            async function secureAction(endpoint, payload_data = {{}}) {{
                 let key = prompt("Enter Security Key to proceed:");
                 if (key) {{
-                    let sep = action.includes('?') ? '&' : '?';
-                    window.location.href = "/" + action + sep + "key=" + encodeURIComponent(key);
+                    payload_data['key'] = key;
+                    try {{
+                        let response = await fetch(endpoint, {{
+                            method: 'POST',
+                            headers: {{ 'Content-Type': 'application/json' }},
+                            body: JSON.stringify(payload_data)
+                        }});
+                        let text = await response.text();
+                        alert(text);
+                        location.reload();
+                    }} catch (err) {{
+                        alert("❌ Request Failed: " + err);
+                    }}
                 }}
             }}
         </script>
 
-        <a href="javascript:secureAction('toggle')" style="background: #45a29e; color: #0b0c10; padding: 10px; text-decoration: none; font-weight: bold;">[ TOGGLE ENGINE ]</a>
-        <a href="javascript:secureAction('test')" style="background: #e74c3c; color: white; padding: 10px; text-decoration: none; font-weight: bold;">[ FIRE TEST SIGNAL ]</a>
+        <button onclick="secureAction('/toggle')" style="background: #45a29e; color: #0b0c10; padding: 10px; font-weight: bold; border: none; cursor: pointer;">[ TOGGLE ENGINE ]</button>
+        <button onclick="secureAction('/test')" style="background: #e74c3c; color: white; padding: 10px; font-weight: bold; border: none; cursor: pointer;">[ FIRE TEST SIGNAL ]</button>
         <br><br><br>
         
         <h3 style="color: #a78bfa;">⏱️ SET CHECK INTERVAL (GEAR)</h3>
-        <a href="javascript:secureAction('set_interval?sec=3.0')" style="background: #27ae60; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ 🟢 3 SECONDS (SLOW) ]</a>
-        <a href="javascript:secureAction('set_interval?sec=2.0')" style="background: #f39c12; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ 🟡 2 SECONDS (NORMAL) ]</a>
-        <a href="javascript:secureAction('set_interval?sec=1.0')" style="background: #c0392b; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ 🔴 1 SECOND (APEX) ]</a>
+        <button onclick="secureAction('/set_interval', {{sec: 3.0}})" style="background: #27ae60; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟢 3 SECONDS (SLOW) ]</button>
+        <button onclick="secureAction('/set_interval', {{sec: 2.0}})" style="background: #f39c12; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟡 2 SECONDS (NORMAL) ]</button>
+        <button onclick="secureAction('/set_interval', {{sec: 1.0}})" style="background: #c0392b; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🔴 1 SECOND (APEX) ]</button>
         <br><br>
 
         <h3 style="color: #a78bfa;">🛡️ SET CIRCUIT BREAKER LIMIT</h3>
-        <a href="javascript:secureAction('set_circuit?limit=3')" style="background: #c0392b; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ STRICT (3 FAILS) ]</a>
-        <a href="javascript:secureAction('set_circuit?limit=6')" style="background: #f39c12; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ NORMAL (6 FAILS) ]</a>
-        <a href="javascript:secureAction('set_circuit?limit=10')" style="background: #27ae60; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ RELAXED (10 FAILS) ]</a>
+        <button onclick="secureAction('/set_circuit', {{limit: 3}})" style="background: #c0392b; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ STRICT (3 FAILS) ]</button>
+        <button onclick="secureAction('/set_circuit', {{limit: 6}})" style="background: #f39c12; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ NORMAL (6 FAILS) ]</button>
+        <button onclick="secureAction('/set_circuit', {{limit: 10}})" style="background: #27ae60; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ RELAXED (10 FAILS) ]</button>
         <br><br>
 
         <h3 style="color: #a78bfa;">⏳ SET 429 RATE LIMIT COOLDOWN</h3>
-        <a href="javascript:secureAction('set_cooldown?sec=1.0')" style="background: #c0392b; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ 🔴 1 SECOND ]</a>
-        <a href="javascript:secureAction('set_cooldown?sec=2.0')" style="background: #f39c12; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ 🟡 2 SECONDS ]</a>
-        <a href="javascript:secureAction('set_cooldown?sec=3.0')" style="background: #27ae60; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ 🟢 3 SECONDS ]</a>
+        <button onclick="secureAction('/set_cooldown', {{sec: 1.0}})" style="background: #c0392b; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🔴 1 SECOND ]</button>
+        <button onclick="secureAction('/set_cooldown', {{sec: 2.0}})" style="background: #f39c12; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟡 2 SECONDS ]</button>
+        <button onclick="secureAction('/set_cooldown', {{sec: 3.0}})" style="background: #27ae60; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟢 3 SECONDS ]</button>
         <br><br><br>
 
         <a href="/status" style="color: #66fcf1; text-decoration: underline;">[ VIEW RAW JSON STATUS ]</a>
     </div>    
     """
 
-@app.route("/toggle")
+@app.route("/toggle", methods=["POST"])
 def toggle() -> Any:
-    if request.args.get("key") != SECURITY_KEY:
+    data = request.get_json(silent=True) or {}
+    if data.get("key") != SECURITY_KEY:
         logger.warning("Unauthorized TOGGLE attempt blocked!")
         return "❌ ACCESS DENIED: Invalid Security Key!", 403
 
     with state_lock:
         monitor_state["enabled"] = not monitor_state["enabled"]
         is_active: bool = monitor_state["enabled"]
-    logger.info(f"Engine state changed. Active: {is_active}")
-    return f"✅ Action Successful! Engine Active: {is_active} <br><br> <a href='/'>[ Go Back to Dashboard ]</a>"
 
-@app.route("/test")
+    # Telegram notification only on ON/OFF
+    if is_active:
+        telegram_client.fire_and_forget("🟢 অফিস চালু হলো")
+    else:
+        telegram_client.fire_and_forget("🔴 অফিস বন্ধ হলো")
+
+    logger.info(f"Engine state changed. Active: {is_active}")
+    return f"✅ Action Successful! Engine Active: {is_active}"
+
+@app.route("/test", methods=["POST"])
 def test_alert() -> Any:
-    if request.args.get("key") != SECURITY_KEY:
+    data = request.get_json(silent=True) or {}
+    if data.get("key") != SECURITY_KEY:
         logger.warning("Unauthorized TEST SIGNAL attempt blocked!")
         return "❌ ACCESS DENIED: Invalid Security Key!", 403
 
-    if loop_ref:
-        asyncio.run_coroutine_threadsafe(
-            telegram_client.fire_and_forget("🚨 SYSTEM TEST: The Secure Apex Engine is fully operational!"), 
-            loop_ref
-        )
-    return "✅ Test signal injected instantly! <br><br> <a href='/'>[ Go Back to Dashboard ]</a>"
+    telegram_client.fire_and_forget("🚨 SYSTEM TEST: The Secure Apex Engine is fully operational!")
+    return "✅ Test signal injected instantly!"
 
-@app.route("/set_interval")
+@app.route("/set_interval", methods=["POST"])
 def set_interval() -> Any:
-    if request.args.get("key") != SECURITY_KEY:
+    data = request.get_json(silent=True) or {}
+    if data.get("key") != SECURITY_KEY:
         return "❌ ACCESS DENIED!", 403
     try:
-        new_speed = float(request.args.get("sec", 2.0))
+        new_speed = float(data.get("sec", 2.0))
         with state_lock:
             monitor_state["interval"] = new_speed
-        if loop_ref:
-            asyncio.run_coroutine_threadsafe(
-                telegram_client.fire_and_forget(f"⏱️ Engine Speed Changed: Checking every {new_speed}s!"), 
-                loop_ref
-            )
-        return f"✅ Interval successfully set to {new_speed}s! <br><br> <a href='/'>[ Go Back to Dashboard ]</a>"
+        telegram_client.fire_and_forget(f"⏱️ Engine Speed Changed: Checking every {new_speed}s!")
+        return f"✅ Interval successfully set to {new_speed}s!"
     except Exception as e:
         return f"❌ Error: {e}", 400
 
-@app.route("/set_circuit")
+@app.route("/set_circuit", methods=["POST"])
 def set_circuit() -> Any:
-    if request.args.get("key") != SECURITY_KEY:
+    data = request.get_json(silent=True) or {}
+    if data.get("key") != SECURITY_KEY:
         return "❌ ACCESS DENIED!", 403
     try:
-        limit = int(request.args.get("limit", 6))
+        limit = int(data.get("limit", 6))
         with state_lock:
             monitor_state["circuit_limit"] = limit
-        return f"✅ Circuit Breaker limit set to {limit} fails! <br><br> <a href='/'>[ Back to Dashboard ]</a>"
+        return f"✅ Circuit Breaker limit set to {limit} fails!"
     except Exception as e:
         return f"❌ Error: {e}", 400
 
-@app.route("/set_cooldown")
+@app.route("/set_cooldown", methods=["POST"])
 def set_cooldown() -> Any:
-    if request.args.get("key") != SECURITY_KEY:
+    data = request.get_json(silent=True) or {}
+    if data.get("key") != SECURITY_KEY:
         return "❌ ACCESS DENIED!", 403
     try:
-        sec = float(request.args.get("sec", 1.0))
+        sec = float(data.get("sec", 1.0))
         with state_lock:
             monitor_state["cooldown_429"] = sec
-        return f"✅ 429 Cooldown set to {sec}s! <br><br> <a href='/'>[ Back to Dashboard ]</a>"
+        return f"✅ 429 Cooldown set to {sec}s!"
     except Exception as e:
         return f"❌ Error: {e}", 400
 
-@app.route("/status")
+@app.route("/status", methods=["GET"])
 def api_status():
     with state_lock:
         return jsonify(monitor_state)
@@ -209,9 +227,10 @@ class TelegramClient:
         self.failed_queue: asyncio.Queue[tuple[str, int]] = asyncio.Queue() 
         self.dlq_count: int = 0
 
-    async def fire_and_forget(self, msg: str) -> None:
-        """Rocket Speed: Non-blocking instant delivery."""
-        asyncio.create_task(self._process_initial_send(msg))
+    def fire_and_forget(self, msg: str) -> None:
+        """Rocket Speed: Non-blocking instant delivery (Thread-Safe Sync Wrapper)."""
+        if loop_ref is not None and loop_ref.is_running():
+            asyncio.run_coroutine_threadsafe(self._process_initial_send(msg), loop_ref)
 
     async def _process_initial_send(self, msg: str) -> None:
         success: bool = await self._deliver_with_retry(msg)
@@ -239,7 +258,7 @@ class TelegramClient:
             except httpx.RequestError as e:
                 logger.warning(f"Telegram network glitch: {e}")
             except httpx.HTTPStatusError as e:
-                logger.warning(f"Telegram API rejected payload: {e}")
+                logger.warning(f"Telegram API rejected payload: {e.response.status_code} - {e.response.text}")
             except Exception as e:
                 logger.error(f"Unexpected Telegram error: {e}")
             
@@ -282,6 +301,7 @@ class EliteMasterBot:
         self.last_status: str = "starting"
         self.last_ping_time: float = time.time()
         self.circuit_breaker_fails: int = 0
+        self.timeout_count: int = 0  
 
     async def execute_engine(self) -> None:
         global loop_ref
@@ -300,7 +320,7 @@ class EliteMasterBot:
         }
         
         limits: httpx.Limits = httpx.Limits(max_keepalive_connections=10, max_connections=20)
-        timeout_config: httpx.Timeout = httpx.Timeout(6.0, connect=2.0, read=4.0)
+        timeout_config: httpx.Timeout = httpx.Timeout(4.0, connect=1.5, read=2.5)
         
         try:
             async with httpx.AsyncClient(http2=True, headers=headers, limits=limits) as client:
@@ -321,7 +341,6 @@ class EliteMasterBot:
                     start_time: float = time.perf_counter()
                     
                     try:
-                        # 9.7/10: Smart Circuit Breaker (Prevents perma-bans)
                         if self.circuit_breaker_fails >= current_circuit_limit:
                             logger.warning(f"CIRCUIT BREAKER OPEN: Target server unstable. Cooldown (2s)...")
                             await asyncio.sleep(2.0)
@@ -329,68 +348,99 @@ class EliteMasterBot:
                             continue
 
                         response = await client.get(URL, timeout=timeout_config)
+                        
                         latency: int = round((time.perf_counter() - start_time) * 1000)
                         update_state("latency_ms", latency)
                         
                         status_code: int = response.status_code
                         
-                        # 9.7/10: Smart 429 Evasion
                         if status_code == 429:
+                            update_state("status", "RATE LIMITED (429)")
                             logger.warning(f"THROTTLED (429): Rate limit hit. Sleeping for {current_429_cooldown}s")
                             await asyncio.sleep(current_429_cooldown)
                             continue
                             
-                        if status_code == 200:
+                        elif status_code == 200:
                             self.circuit_breaker_fails = 0 
+                            self.timeout_count = 0  
                             try:
                                 data: dict = response.json()
                                 is_offline: bool = data.get("api_offline_locked", True)
+                                push_locked: bool = data.get("push_locked", False)
+                                webhook_status: str = data.get("webhook_status", "ok")
                                 
-                                current_status = "offline" if is_offline else "online"
-                                message = "🔴 Buyer OFFLINE" if is_offline else "🟢 Buyer ONLINE"
+                                if is_offline:
+                                    current_status = "offline"
+                                    message = "🔴 Buyer OFFLINE"
+                                elif push_locked:
+                                    current_status = "locked"
+                                    message = "🔒 Push LOCKED"
+                                elif webhook_status != "ok":
+                                    current_status = "webhook_error"
+                                    message = f"⚠️ Webhook Error: {webhook_status}"
+                                else:
+                                    current_status = "online"
+                                    message = "🟢 Buyer ONLINE"
                             except Exception as json_err:
                                 current_status = "error"
                                 message = "⚠️ Data Parse Error"
                                 logger.error(f"Failed to read JSON: {json_err}")
                                 
                         elif status_code in [502, 503, 504]:
-                            current_status = "error"
-                            message = f"⚠️ Target Server Down (Code {status_code})"
                             self.circuit_breaker_fails += 1
+                            logger.warning(f"Server Down ({status_code}). Strike {self.circuit_breaker_fails}")
+                            if self.circuit_breaker_fails < 3:
+                                current_status = self.last_status 
+                            else:
+                                current_status = "error"
+                                message = f"⚠️ Target Server Down (Code {status_code})"
                             
                         else:
-                            current_status = "error"
-                            message = f"⚠️ Unknown HTTP Error ({status_code})"
                             self.circuit_breaker_fails += 1
+                            if self.circuit_breaker_fails < 3:
+                                current_status = self.last_status
+                            else:
+                                current_status = "error"
+                                message = f"⚠️ Unknown HTTP Error ({status_code})"
 
                     except httpx.TimeoutException:
+                        self.timeout_count += 1
+                        logger.warning(f"Polling Timeout ({self.timeout_count}/3)")
+                        
+                        if self.timeout_count < 3:
+                            await asyncio.sleep(current_interval)
+                            continue
+                            
                         current_status = "down"
                         message = "❌ Target Connection Timed Out"
-                        self.circuit_breaker_fails += 1
-                        logger.warning("Polling Timeout.")
+                            
                     except httpx.RequestError as req_err:
-                        current_status = "down"
-                        message = "❌ Network Socket Drop"
                         self.circuit_breaker_fails += 1
-                        logger.warning(f"Network error: {req_err}")
+                        logger.warning(f"Network error: {req_err}. Strike {self.circuit_breaker_fails}")
+                        if self.circuit_breaker_fails < 3:
+                            current_status = self.last_status
+                        else:
+                            current_status = "down"
+                            message = "❌ Network Socket Drop"
+                            
                     except Exception as e:
-                        current_status = "down"
-                        message = "❌ Unexpected Core Error"
                         self.circuit_breaker_fails += 1
                         logger.error(f"Core error: {e}")
+                        if self.circuit_breaker_fails < 3:
+                            current_status = self.last_status
+                        else:
+                            current_status = "down"
+                            message = "❌ Unexpected Core Error"
 
                     now_str: str = datetime.now(BST).strftime("%I:%M:%S %p")
                     update_state("last_check", now_str)
                     update_state("status", current_status.upper())
 
                     if current_status != self.last_status:
-                        await telegram_client.fire_and_forget(f"{message} - {now_str}")
+                        telegram_client.fire_and_forget(f"{message} - {now_str}")
                         self.last_status = current_status
                         logger.info(f"PARADIGM SHIFT DETECTED: -> {current_status.upper()}")
 
-                    # ==========================================
-                    # SYSTEM HEARTBEAT (Dynamic Uradhura Kopao Style!)
-                    # ==========================================
                     current_epoch: float = time.time()
                     if current_epoch - self.last_ping_time > ALIVE_INTERVAL:
                         if self.last_status == "online":
@@ -425,7 +475,7 @@ class EliteMasterBot:
                             ]
                             
                         random_msg = random.choice(funny_msgs)
-                        await telegram_client.fire_and_forget(f"💚 {random_msg} - {now_str}")
+                        telegram_client.fire_and_forget(f"💚 {random_msg} - {now_str}")
                         self.last_ping_time = current_epoch
 
                     await asyncio.sleep(current_interval)
@@ -451,9 +501,8 @@ def run_apex_loop() -> None:
 
 def handle_sigterm(*args: Any) -> None:
     global engine_running
-    logger.info("RECEIVED SHUTDOWN SIGNAL. Initiating Graceful Shutdown...")
+    logger.info("RECEIVED SHUTDOWN SIGNAL. Initiating Graceful Shutdown (Waiting for tasks to close)...")
     engine_running = False
-    sys.exit(0)
 
 # ==========================================
 #          MASTER BOOT RECORD (RUN)
@@ -464,5 +513,6 @@ if __name__ == "__main__":
 
     threading.Thread(target=run_apex_loop, daemon=True, name="CoreEngineThread").start()
     
-    logger.info("Starting Production WSGI Server (Waitress) on port 10000...")
-    serve(app, host="0.0.0.0", port=10000)
+    logger.info("Starting Production WSGI Server (Waitress)...")
+    port = int(os.environ.get("PORT", 10000))
+    serve(app, host="0.0.0.0", port=port)
