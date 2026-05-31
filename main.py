@@ -53,8 +53,8 @@ monitor_state: dict[str, Any] = {
     "enabled": True,
     "queue_size": 0,
     "dlq_size": 0,
-    "interval": CHECK_INTERVAL,  # 🎯 Default pulled from your config
-    "circuit_limit": 6,          # 🎯 Default Circuit Breaker Limit
+    "interval": CHECK_INTERVAL,  
+    "circuit_limit": 6,          
     "cooldown_429": 1.0          # 🎯 Default 429 Cooldown
 }
 
@@ -116,9 +116,9 @@ def dashboard() -> str:
         <br><br>
 
         <h3 style="color: #a78bfa;">⏳ SET 429 RATE LIMIT COOLDOWN</h3>
-        <a href="javascript:secureAction('set_cooldown?sec=1.0')" style="background: #c0392b; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ AGGRESSIVE (1.0s) ]</a>
-        <a href="javascript:secureAction('set_cooldown?sec=2.0')" style="background: #f39c12; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ SAFE (2.0s) ]</a>
-        <a href="javascript:secureAction('set_cooldown?sec=3.0')" style="background: #27ae60; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ GHOST (3.0s) ]</a>
+        <a href="javascript:secureAction('set_cooldown?sec=1.0')" style="background: #c0392b; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ 🔴 1 SECOND ]</a>
+        <a href="javascript:secureAction('set_cooldown?sec=2.0')" style="background: #f39c12; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ 🟡 2 SECONDS ]</a>
+        <a href="javascript:secureAction('set_cooldown?sec=3.0')" style="background: #27ae60; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ 🟢 3 SECONDS ]</a>
         <br><br><br>
 
         <a href="/status" style="color: #66fcf1; text-decoration: underline;">[ VIEW RAW JSON STATUS ]</a>
@@ -127,7 +127,6 @@ def dashboard() -> str:
 
 @app.route("/toggle")
 def toggle() -> Any:
-    # 🔐 STRICT SECURITY CHECK
     if request.args.get("key") != SECURITY_KEY:
         logger.warning("Unauthorized TOGGLE attempt blocked!")
         return "❌ ACCESS DENIED: Invalid Security Key!", 403
@@ -140,7 +139,6 @@ def toggle() -> Any:
 
 @app.route("/test")
 def test_alert() -> Any:
-    # 🔐 STRICT SECURITY CHECK
     if request.args.get("key") != SECURITY_KEY:
         logger.warning("Unauthorized TEST SIGNAL attempt blocked!")
         return "❌ ACCESS DENIED: Invalid Security Key!", 403
@@ -177,7 +175,7 @@ def set_circuit() -> Any:
         limit = int(request.args.get("limit", 6))
         with state_lock:
             monitor_state["circuit_limit"] = limit
-        return f"✅ Circuit Breaker limit set to {limit} fails! <br><br> <a href='/'>[ Go Back to Dashboard ]</a>"
+        return f"✅ Circuit Breaker limit set to {limit} fails! <br><br> <a href='/'>[ Back to Dashboard ]</a>"
     except Exception as e:
         return f"❌ Error: {e}", 400
 
@@ -189,7 +187,7 @@ def set_cooldown() -> Any:
         sec = float(request.args.get("sec", 1.0))
         with state_lock:
             monitor_state["cooldown_429"] = sec
-        return f"✅ 429 Cooldown set to {sec}s! <br><br> <a href='/'>[ Go Back to Dashboard ]</a>"
+        return f"✅ 429 Cooldown set to {sec}s! <br><br> <a href='/'>[ Back to Dashboard ]</a>"
     except Exception as e:
         return f"❌ Error: {e}", 400
 
@@ -308,7 +306,6 @@ class EliteMasterBot:
             async with httpx.AsyncClient(http2=True, headers=headers, limits=limits) as client:
                 
                 while engine_running:
-                    # 🎯 ড্যাশবোর্ড থেকে রিয়েল-টাইম কন্ট্রোল ভ্যালুগুলো টানা হচ্ছে
                     with state_lock:
                         is_enabled: bool = monitor_state["enabled"]
                         current_interval: float = monitor_state["interval"]
@@ -386,7 +383,6 @@ class EliteMasterBot:
                     update_state("last_check", now_str)
                     update_state("status", current_status.upper())
 
-                    # INSTANT PARADIGM SHIFT: Firing immediately on ANY status change
                     if current_status != self.last_status:
                         await telegram_client.fire_and_forget(f"{message} - {now_str}")
                         self.last_status = current_status
@@ -432,7 +428,6 @@ class EliteMasterBot:
                         await telegram_client.fire_and_forget(f"💚 {random_msg} - {now_str}")
                         self.last_ping_time = current_epoch
 
-                    # 🎯 ড্যাশবোর্ডের স্পিড অনুযায়ী বটের রেস্ট
                     await asyncio.sleep(current_interval)
 
         finally:
@@ -454,7 +449,6 @@ def run_apex_loop() -> None:
     finally:
         loop.close()
 
-# Graceful Shutdown Handler
 def handle_sigterm(*args: Any) -> None:
     global engine_running
     logger.info("RECEIVED SHUTDOWN SIGNAL. Initiating Graceful Shutdown...")
