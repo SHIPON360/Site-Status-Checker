@@ -52,7 +52,10 @@ monitor_state: dict[str, Any] = {
     "latency_ms": 0,
     "enabled": True,
     "queue_size": 0,
-    "dlq_size": 0
+    "dlq_size": 0,
+    "interval": CHECK_INTERVAL,  # 🎯 Default pulled from your config
+    "circuit_limit": 6,          # 🎯 Default Circuit Breaker Limit
+    "cooldown_429": 1.0          # 🎯 Default 429 Cooldown
 }
 
 def update_state(key: str, value: Any) -> None:
@@ -72,10 +75,13 @@ def dashboard() -> str:
         current_state: dict[str, Any] = monitor_state.copy()
         
     return f"""
-    <div style="font-family: monospace; background: #0b0c10; color: #66fcf1; padding: 20px; height: 100vh;">
+    <div style="font-family: monospace; background: #0b0c10; color: #66fcf1; padding: 20px; min-height: 100vh;">
         <h2>👑 APEX ENGINE - ENTERPRISE DASHBOARD</h2>
         <p>>_ TARGET API: {URL}</p>
         <p>>_ CURRENT STATUS: <strong style="color: #ffffff;">{current_state['status']}</strong></p>
+        <p>>_ CHECK INTERVAL: <strong style="color: #f39c12;">{current_state['interval']} Seconds</strong> ⏱️</p>
+        <p>>_ CIRCUIT LIMIT: <strong style="color: #e74c3c;">{current_state['circuit_limit']} Fails</strong> 🛡️</p>
+        <p>>_ 429 COOLDOWN: <strong style="color: #e74c3c;">{current_state['cooldown_429']} Seconds</strong> ⏳</p>
         <p>>_ LAST PING TIME: {current_state['last_check']}</p>
         <p>>_ LAST ALERT SENT: {current_state['last_alert']}</p>
         <p>>_ NETWORK LATENCY: {current_state['latency_ms']} ms</p>
@@ -87,15 +93,34 @@ def dashboard() -> str:
             function secureAction(action) {{
                 let key = prompt("Enter Security Key to proceed:");
                 if (key) {{
-                    window.location.href = "/" + action + "?key=" + encodeURIComponent(key);
+                    let sep = action.includes('?') ? '&' : '?';
+                    window.location.href = "/" + action + sep + "key=" + encodeURIComponent(key);
                 }}
             }}
         </script>
 
         <a href="javascript:secureAction('toggle')" style="background: #45a29e; color: #0b0c10; padding: 10px; text-decoration: none; font-weight: bold;">[ TOGGLE ENGINE ]</a>
-        <br><br><br>
         <a href="javascript:secureAction('test')" style="background: #e74c3c; color: white; padding: 10px; text-decoration: none; font-weight: bold;">[ FIRE TEST SIGNAL ]</a>
         <br><br><br>
+        
+        <h3 style="color: #a78bfa;">⏱️ SET CHECK INTERVAL (GEAR)</h3>
+        <a href="javascript:secureAction('set_interval?sec=3.0')" style="background: #27ae60; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ 🟢 3 SECONDS (SLOW) ]</a>
+        <a href="javascript:secureAction('set_interval?sec=2.0')" style="background: #f39c12; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ 🟡 2 SECONDS (NORMAL) ]</a>
+        <a href="javascript:secureAction('set_interval?sec=1.0')" style="background: #c0392b; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ 🔴 1 SECOND (APEX) ]</a>
+        <br><br>
+
+        <h3 style="color: #a78bfa;">🛡️ SET CIRCUIT BREAKER LIMIT</h3>
+        <a href="javascript:secureAction('set_circuit?limit=3')" style="background: #c0392b; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ STRICT (3 FAILS) ]</a>
+        <a href="javascript:secureAction('set_circuit?limit=6')" style="background: #f39c12; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ NORMAL (6 FAILS) ]</a>
+        <a href="javascript:secureAction('set_circuit?limit=10')" style="background: #27ae60; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ RELAXED (10 FAILS) ]</a>
+        <br><br>
+
+        <h3 style="color: #a78bfa;">⏳ SET 429 RATE LIMIT COOLDOWN</h3>
+        <a href="javascript:secureAction('set_cooldown?sec=1.0')" style="background: #c0392b; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ AGGRESSIVE (1.0s) ]</a>
+        <a href="javascript:secureAction('set_cooldown?sec=3.0')" style="background: #f39c12; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ SAFE (3.0s) ]</a>
+        <a href="javascript:secureAction('set_cooldown?sec=5.0')" style="background: #27ae60; color: white; padding: 8px; text-decoration: none; font-weight: bold;">[ GHOST (5.0s) ]</a>
+        <br><br><br>
+
         <a href="/status" style="color: #66fcf1; text-decoration: underline;">[ VIEW RAW JSON STATUS ]</a>
     </div>    
     """
@@ -126,6 +151,47 @@ def test_alert() -> Any:
             loop_ref
         )
     return "✅ Test signal injected instantly! <br><br> <a href='/'>[ Go Back to Dashboard ]</a>"
+
+@app.route("/set_interval")
+def set_interval() -> Any:
+    if request.args.get("key") != SECURITY_KEY:
+        return "❌ ACCESS DENIED!", 403
+    try:
+        new_speed = float(request.args.get("sec", 2.0))
+        with state_lock:
+            monitor_state["interval"] = new_speed
+        if loop_ref:
+            asyncio.run_coroutine_threadsafe(
+                telegram_client.fire_and_forget(f"⏱️ Engine Speed Changed: Checking every {new_speed}s!"), 
+                loop_ref
+            )
+        return f"✅ Interval successfully set to {new_speed}s! <br><br> <a href='/'>[ Go Back to Dashboard ]</a>"
+    except Exception as e:
+        return f"❌ Error: {e}", 400
+
+@app.route("/set_circuit")
+def set_circuit() -> Any:
+    if request.args.get("key") != SECURITY_KEY:
+        return "❌ ACCESS DENIED!", 403
+    try:
+        limit = int(request.args.get("limit", 6))
+        with state_lock:
+            monitor_state["circuit_limit"] = limit
+        return f"✅ Circuit Breaker limit set to {limit} fails! <br><br> <a href='/'>[ Go Back to Dashboard ]</a>"
+    except Exception as e:
+        return f"❌ Error: {e}", 400
+
+@app.route("/set_cooldown")
+def set_cooldown() -> Any:
+    if request.args.get("key") != SECURITY_KEY:
+        return "❌ ACCESS DENIED!", 403
+    try:
+        sec = float(request.args.get("sec", 1.0))
+        with state_lock:
+            monitor_state["cooldown_429"] = sec
+        return f"✅ 429 Cooldown set to {sec}s! <br><br> <a href='/'>[ Go Back to Dashboard ]</a>"
+    except Exception as e:
+        return f"❌ Error: {e}", 400
 
 @app.route("/status")
 def api_status():
@@ -242,8 +308,12 @@ class EliteMasterBot:
             async with httpx.AsyncClient(http2=True, headers=headers, limits=limits) as client:
                 
                 while engine_running:
+                    # 🎯 ড্যাশবোর্ড থেকে রিয়েল-টাইম কন্ট্রোল ভ্যালুগুলো টানা হচ্ছে
                     with state_lock:
                         is_enabled: bool = monitor_state["enabled"]
+                        current_interval: float = monitor_state["interval"]
+                        current_circuit_limit: int = monitor_state["circuit_limit"]
+                        current_429_cooldown: float = monitor_state["cooldown_429"]
                         
                     if not is_enabled:
                         await asyncio.sleep(1.0)
@@ -255,8 +325,8 @@ class EliteMasterBot:
                     
                     try:
                         # 9.7/10: Smart Circuit Breaker (Prevents perma-bans)
-                        if self.circuit_breaker_fails >= 6:
-                            logger.warning("CIRCUIT BREAKER OPEN: Target server unstable. Cooldown (2s)...")
+                        if self.circuit_breaker_fails >= current_circuit_limit:
+                            logger.warning(f"CIRCUIT BREAKER OPEN: Target server unstable. Cooldown (2s)...")
                             await asyncio.sleep(2.0)
                             self.circuit_breaker_fails = 0
                             continue
@@ -269,8 +339,8 @@ class EliteMasterBot:
                         
                         # 9.7/10: Smart 429 Evasion
                         if status_code == 429:
-                            logger.warning(f"THROTTLED (429): Rate limit hit. Latency: {latency}ms")
-                            await asyncio.sleep(1.0)
+                            logger.warning(f"THROTTLED (429): Rate limit hit. Sleeping for {current_429_cooldown}s")
+                            await asyncio.sleep(current_429_cooldown)
                             continue
                             
                         if status_code == 200:
@@ -362,7 +432,8 @@ class EliteMasterBot:
                         await telegram_client.fire_and_forget(f"💚 {random_msg} - {now_str}")
                         self.last_ping_time = current_epoch
 
-                    await asyncio.sleep(CHECK_INTERVAL)
+                    # 🎯 ড্যাশবোর্ডের স্পিড অনুযায়ী বটের রেস্ট
+                    await asyncio.sleep(current_interval)
 
         finally:
             await telegram_client.close()
