@@ -128,9 +128,11 @@ def dashboard() -> str:
         <br><br>
 
         <h3 style="color: #a78bfa;">🛡️ SET CIRCUIT BREAKER LIMIT</h3>
-        <button onclick="secureAction('/set_circuit', {{limit: 3}})" style="background: #c0392b; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ STRICT (3 FAILS) ]</button>
+        <button onclick="secureAction('/set_circuit', {{limit: 2}})" style="background: #c0392b; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ ULTRA STRICT (2 FAILS) ]</button>
+        <button onclick="secureAction('/set_circuit', {{limit: 4}})" style="background: #e67e22; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ STRICT (4 FAILS) ]</button>
         <button onclick="secureAction('/set_circuit', {{limit: 6}})" style="background: #f39c12; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ NORMAL (6 FAILS) ]</button>
-        <button onclick="secureAction('/set_circuit', {{limit: 10}})" style="background: #27ae60; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ RELAXED (10 FAILS) ]</button>
+        <button onclick="secureAction('/set_circuit', {{limit: 8}})" style="background: #2980b9; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ RELAXED (8 FAILS) ]</button>
+        <button onclick="secureAction('/set_circuit', {{limit: 10}})" style="background: #27ae60; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ MAX (10 FAILS) ]</button>
         <br><br>
         
         <h3 style="color: #a78bfa;">🔌 SET CIRCUIT BREAKER COOLDOWN</h3>
