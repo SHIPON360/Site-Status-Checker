@@ -58,7 +58,8 @@ monitor_state: dict[str, Any] = {
     "dlq_size": 0,
     "interval": CHECK_INTERVAL,  
     "circuit_limit": 6,          
-    "cooldown_429": 1.0          
+    "cooldown_429": 1.0,
+    "circuit_cooldown": 2.0
 }
 
 def update_state(key: str, value: Any) -> None:
@@ -84,6 +85,7 @@ def dashboard() -> str:
         <p>>_ CURRENT STATUS: <strong style="color: #ffffff; background: #c0392b; padding: 2px 5px;">{current_state['status']}</strong></p>
         <p>>_ CHECK INTERVAL: <strong style="color: #f39c12;">{current_state['interval']} Seconds</strong> ⏱️</p>
         <p>>_ CIRCUIT LIMIT: <strong style="color: #e74c3c;">{current_state['circuit_limit']} Fails</strong> 🛡️</p>
+        <p>>_ CIRCUIT COOLDOWN: <strong style="color: #e74c3c;">{current_state['circuit_cooldown']} Seconds</strong> 🔌</p>
         <p>>_ 429 COOLDOWN: <strong style="color: #e74c3c;">{current_state['cooldown_429']} Seconds</strong> ⏳</p>
         <p>>_ LAST PING TIME: {current_state['last_check']}</p>
         <p>>_ LAST ALERT SENT: {current_state['last_alert']}</p>
@@ -118,9 +120,11 @@ def dashboard() -> str:
         <br><br><br>
         
         <h3 style="color: #a78bfa;">⏱️ SET CHECK INTERVAL (GEAR)</h3>
-        <button onclick="secureAction('/set_interval', {{sec: 3.0}})" style="background: #27ae60; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟢 3 SECONDS (SLOW) ]</button>
-        <button onclick="secureAction('/set_interval', {{sec: 2.0}})" style="background: #f39c12; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟡 2 SECONDS (NORMAL) ]</button>
-        <button onclick="secureAction('/set_interval', {{sec: 1.0}})" style="background: #c0392b; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🔴 1 SECOND (APEX) ]</button>
+        <button onclick="secureAction('/set_interval', {{sec: 5.0}})" style="background: #8e44ad; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟣 5 SECONDS ]</button>
+        <button onclick="secureAction('/set_interval', {{sec: 4.0}})" style="background: #2980b9; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🔵 4 SECONDS ]</button>
+        <button onclick="secureAction('/set_interval', {{sec: 3.0}})" style="background: #27ae60; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟢 3 SECONDS ]</button>
+        <button onclick="secureAction('/set_interval', {{sec: 2.0}})" style="background: #f39c12; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟡 2 SECONDS ]</button>
+        <button onclick="secureAction('/set_interval', {{sec: 1.0}})" style="background: #c0392b; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🔴 1 SECOND ]</button>
         <br><br>
 
         <h3 style="color: #a78bfa;">🛡️ SET CIRCUIT BREAKER LIMIT</h3>
@@ -128,11 +132,21 @@ def dashboard() -> str:
         <button onclick="secureAction('/set_circuit', {{limit: 6}})" style="background: #f39c12; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ NORMAL (6 FAILS) ]</button>
         <button onclick="secureAction('/set_circuit', {{limit: 10}})" style="background: #27ae60; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ RELAXED (10 FAILS) ]</button>
         <br><br>
+        
+        <h3 style="color: #a78bfa;">🔌 SET CIRCUIT BREAKER COOLDOWN</h3>
+        <button onclick="secureAction('/set_circuit_cooldown', {{sec: 5.0}})" style="background: #8e44ad; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟣 5 SECONDS ]</button>
+        <button onclick="secureAction('/set_circuit_cooldown', {{sec: 4.0}})" style="background: #2980b9; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🔵 4 SECONDS ]</button>
+        <button onclick="secureAction('/set_circuit_cooldown', {{sec: 3.0}})" style="background: #27ae60; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟢 3 SECONDS ]</button>
+        <button onclick="secureAction('/set_circuit_cooldown', {{sec: 2.0}})" style="background: #f39c12; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟡 2 SECONDS ]</button>
+        <button onclick="secureAction('/set_circuit_cooldown', {{sec: 1.0}})" style="background: #c0392b; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🔴 1 SECOND ]</button>
+        <br><br>
 
         <h3 style="color: #a78bfa;">⏳ SET 429 RATE LIMIT COOLDOWN</h3>
-        <button onclick="secureAction('/set_cooldown', {{sec: 1.0}})" style="background: #c0392b; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🔴 1 SECOND ]</button>
-        <button onclick="secureAction('/set_cooldown', {{sec: 2.0}})" style="background: #f39c12; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟡 2 SECONDS ]</button>
+        <button onclick="secureAction('/set_cooldown', {{sec: 5.0}})" style="background: #8e44ad; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟣 5 SECONDS ]</button>
+        <button onclick="secureAction('/set_cooldown', {{sec: 4.0}})" style="background: #2980b9; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🔵 4 SECONDS ]</button>
         <button onclick="secureAction('/set_cooldown', {{sec: 3.0}})" style="background: #27ae60; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟢 3 SECONDS ]</button>
+        <button onclick="secureAction('/set_cooldown', {{sec: 2.0}})" style="background: #f39c12; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🟡 2 SECONDS ]</button>
+        <button onclick="secureAction('/set_cooldown', {{sec: 1.0}})" style="background: #c0392b; color: white; padding: 8px; font-weight: bold; border: none; cursor: pointer;">[ 🔴 1 SECOND ]</button>
         <br><br><br>
 
         <a href="/status" style="color: #66fcf1; text-decoration: underline;">[ VIEW RAW JSON STATUS ]</a>
@@ -193,6 +207,19 @@ def set_circuit() -> Any:
         with state_lock:
             monitor_state["circuit_limit"] = limit
         return f"✅ Circuit Breaker limit set to {limit} fails!"
+    except Exception as e:
+        return f"❌ Error: {e}", 400
+
+@app.route("/set_circuit_cooldown", methods=["POST"])
+def set_circuit_cooldown() -> Any:
+    data = request.get_json(silent=True) or {}
+    if data.get("key") != SECURITY_KEY:
+        return "❌ ACCESS DENIED!", 403
+    try:
+        sec = float(data.get("sec", 2.0))
+        with state_lock:
+            monitor_state["circuit_cooldown"] = sec
+        return f"✅ Circuit Breaker Cooldown set to {sec}s!"
     except Exception as e:
         return f"❌ Error: {e}", 400
 
@@ -331,6 +358,7 @@ class EliteMasterBot:
                         current_interval: float = monitor_state["interval"]
                         current_circuit_limit: int = monitor_state["circuit_limit"]
                         current_429_cooldown: float = monitor_state["cooldown_429"]
+                        current_circuit_cooldown: float = monitor_state["circuit_cooldown"]
                         
                     if not is_enabled:
                         await asyncio.sleep(1.0)
@@ -342,8 +370,8 @@ class EliteMasterBot:
                     
                     try:
                         if self.circuit_breaker_fails >= current_circuit_limit:
-                            logger.warning(f"CIRCUIT BREAKER OPEN: Target server unstable. Cooldown (2s)...")
-                            await asyncio.sleep(2.0)
+                            logger.warning(f"CIRCUIT BREAKER OPEN: Target server unstable. Cooldown ({current_circuit_cooldown}s)...")
+                            await asyncio.sleep(current_circuit_cooldown)
                             self.circuit_breaker_fails = 0
                             continue
 
@@ -475,7 +503,10 @@ class EliteMasterBot:
                             ]
                             
                         random_msg = random.choice(funny_msgs)
-                        telegram_client.fire_and_forget(f"💚 {random_msg} - {now_str}")
+                        if self.last_status == "online":
+                            telegram_client.fire_and_forget(f"💚 {random_msg} - {now_str}")
+                        else:
+                            telegram_client.fire_and_forget(f"💔 {random_msg} - {now_str}")
                         self.last_ping_time = current_epoch
 
                     await asyncio.sleep(current_interval)
