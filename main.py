@@ -534,7 +534,26 @@ def run_apex_loop() -> None:
 
 def handle_sigterm(*args: Any) -> None:
     global engine_running
-    logger.info("RECEIVED SHUTDOWN SIGNAL. Initiating Graceful Shutdown (Waiting for tasks to close)...")
+    logger.info("RECEIVED SHUTDOWN SIGNAL. Initiating Graceful Shutdown...")
+
+    try:
+        if loop_ref and loop_ref.is_running():
+            now_str = datetime.now(BST).strftime("%I:%M:%S %p")
+            
+            # আগে ৮ সেকেন্ড ওয়েট করে মেসেজ পাঠানো নিশ্চিত করা হবে
+            future = asyncio.run_coroutine_threadsafe(
+                telegram_client._deliver_with_retry(
+                    f"🔴 অফিস বন্ধ হলো (সিস্টেম শাটডাউন) - {now_str}"
+                ),
+                loop_ref
+            )
+            future.result(timeout=8)
+            logger.info("Shutdown notification delivered successfully.")
+            
+    except Exception as e:
+        logger.error(f"Shutdown alert failed: {e}")
+
+    # সবশেষে মেইন ইঞ্জিন অফ হবে
     engine_running = False
 
 # ==========================================
