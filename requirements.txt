@@ -2,3 +2,4 @@ flask
 waitress
 httpx[http2]
 cloudscraper
+curl_cffi
