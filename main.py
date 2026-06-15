@@ -337,7 +337,7 @@ class EliteMasterBot:
         worker_task = asyncio.create_task(telegram_client.background_retry_worker())
         
         try:
-            async with cffi_requests.AsyncSession(impersonate="chrome124", timeout=4.0) as scraper:
+            async with cffi_requests.AsyncSession(impersonate="chrome", timeout=4.0) as scraper:
                 
                 while engine_running:
                     with state_lock:
