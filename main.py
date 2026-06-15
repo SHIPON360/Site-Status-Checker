@@ -12,7 +12,6 @@ from typing import Any
 from flask import Flask, jsonify, request
 from waitress import serve
 from curl_cffi import requests as cffi_requests
-from curl_cffi.requests.errors import Timeout
 
 # ==========================================
 #          APEX-LEVEL CONFIGURATION
