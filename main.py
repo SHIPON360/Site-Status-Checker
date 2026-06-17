@@ -170,9 +170,28 @@ def toggle() -> Any:
     
     if is_active:
         telegram_client.force_reset_status()
-        telegram_client.fire_and_forget(f"🟢 অফিস চালু হলো! বায়ারের বর্তমান অবস্থা: {current_status}")
+        try:
+            from curl_cffi import requests
+            url = "https://skysysx.net/api/info"
+            # লাইভ চেক মারছি
+            response = requests.get(url, impersonate="chrome", timeout=10)
+            
+            if response.status_code == 200:
+                # যদি রেসপন্সের ভেতরে offline লেখা থাকে, তাহলে অফলাইন দেখাবে
+                if "offline" in response.text.lower():
+                    real_status = "OFFLINE 🔴"
+                else:
+                    real_status = "ONLINE 🟢"
+                    
+                telegram_client.fire_and_forget(f"🟢 অফিস চালু হলো! বায়ারের বর্তমান অবস্থা: {real_status}")
+            else:
+                telegram_client.fire_and_forget(f"🟢 অফিস চালু হলো! কিন্তু সাইটে ERROR ({response.status_code}) দিচ্ছে।")
+        except Exception as e:
+            # যদি লাইভ চেক ফেইল করে, তাহলে ব্যাকআপ হিসেবে পুরনো স্ট্যাটাসটাই দেবে
+            telegram_client.fire_and_forget(f"🟢 অফিস চালু হলো! বায়ারের বর্তমান অবস্থা: {current_status}")
     else:
         telegram_client.fire_and_forget("🔴 অফিস বন্ধ হলো")
+        
 
     logger.info(f"Engine state changed. Active: {is_active}")
     return f"✅ Action Successful! Engine Active: {is_active}"
