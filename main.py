@@ -179,16 +179,16 @@ def toggle() -> Any:
             if response.status_code == 200:
                 # যদি রেসপন্সের ভেতরে offline লেখা থাকে, তাহলে অফলাইন দেখাবে
                 if "offline" in response.text.lower():
-                    real_status = "OFFLINE 🔴"
+                    real_status = "🔴 OFFLINE 🔴"
                 else:
-                    real_status = "ONLINE 🟢"
+                    real_status = "🟢 ONLINE 🟢"
                     
-                telegram_client.fire_and_forget(f"🟢 অফিস চালু হলো! বায়ারের বর্তমান অবস্থা: {real_status}")
+                telegram_client.fire_and_forget(f"🤍 অফিস চালু হলো ! বায়ারের বর্তমান অবস্থা: {real_status}")
             else:
-                telegram_client.fire_and_forget(f"🟢 অফিস চালু হলো! কিন্তু সাইটে ERROR ({response.status_code}) দিচ্ছে।")
+                telegram_client.fire_and_forget(f"🤍 অফিস চালু হলো ! কিন্তু সাইটে ERROR ({response.status_code}) দিচ্ছে।")
         except Exception as e:
             # যদি লাইভ চেক ফেইল করে, তাহলে ব্যাকআপ হিসেবে পুরনো স্ট্যাটাসটাই দেবে
-            telegram_client.fire_and_forget(f"🟢 অফিস চালু হলো! বায়ারের বর্তমান অবস্থা: {current_status}")
+            telegram_client.fire_and_forget(f"🤍 অফিস চালু হলো ! বায়ারের বর্তমান অবস্থা: {current_status}")
     else:
         telegram_client.fire_and_forget("🔴 অফিস বন্ধ হলো")
         
