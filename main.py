@@ -183,14 +183,14 @@ def toggle() -> Any:
                 else:
                     real_status = "🟢 ONLINE 🟢"
                     
-                telegram_client.fire_and_forget(f"🟢 অফিস চালু ! বায়ার : {real_status}")
+                telegram_client.fire_and_forget(f"🔛 অফিস চালু ! বায়ার : {real_status}")
             else:
                 telegram_client.fire_and_forget(f"🟢 অফিস চালু ! কিন্তু সাইটে ERROR ({response.status_code}) দিচ্ছে।")
         except Exception as e:
             # যদি লাইভ চেক ফেইল করে, তাহলে ব্যাকআপ হিসেবে পুরনো স্ট্যাটাসটাই দেবে
             telegram_client.fire_and_forget(f"🟢 অফিস চালু ! বায়ার : {current_status}")
     else:
-        telegram_client.fire_and_forget("🔴 অফিস বন্ধ হলো")
+        telegram_client.fire_and_forget("📴 অফিস বন্ধ হলো")
         
 
     logger.info(f"Engine state changed. Active: {is_active}")
